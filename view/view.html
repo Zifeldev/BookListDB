@@ -1,0 +1,108 @@
+<body>
+  <h1>📚 Управление книгами</h1>
+
+  <!-- Форма добавления книги -->
+  <form id="add-book-form">
+    <h2>➕ Добавить книгу</h2>
+    <input type="text" name="title" placeholder="Название книги" required />
+    <input type="text" name="author" placeholder="Автор" required />
+    <input type="submit" value="Добавить" />
+  </form>
+
+  <h2>📖 Список книг</h2>
+  <table border="1" cellpadding="10" cellspacing="0" style="background:white;">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Название</th>
+        <th>Автор</th>
+        <th>Действия</th>
+      </tr>
+    </thead>
+    <tbody id="book-table-body"></tbody>
+  </table>
+
+  <div id="response" class="message"></div>
+
+  <script>
+    async function loadBooks() {
+      const res = await fetch('/books');
+      const books = await res.json();
+
+      const tableBody = document.getElementById("book-table-body");
+      tableBody.innerHTML = "";
+
+      books.forEach(book => {
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+          <td>${book.id}</td>
+          <td><input value="${book.title}" /></td>
+          <td><input value="${book.author}" /></td>
+          <td>
+            <button onclick="updateBook(${book.id}, this)">✏️</button>
+            <button onclick="deleteBook(${book.id})">🗑️</button>
+          </td>
+        `;
+
+        tableBody.appendChild(row);
+      });
+    }
+
+    async function updateBook(id, btn) {
+      const row = btn.closest("tr");
+      const title = row.children[1].querySelector("input").value;
+      const author = row.children[2].querySelector("input").value;
+
+      const res = await fetch('/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, title, author })
+      });
+
+      const msg = await res.json();
+      showMessage(msg.Message || msg.message, res.ok);
+      loadBooks();
+    }
+
+    async function deleteBook(id) {
+      const res = await fetch('/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+
+      const msg = await res.json();
+      showMessage(msg.Message || msg.message, res.ok);
+      loadBooks();
+    }
+
+    async function handleFormSubmit(event) {
+      event.preventDefault();
+      const form = event.target;
+      const formData = new FormData(form);
+      const jsonData = Object.fromEntries(formData.entries());
+
+      const res = await fetch('/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(jsonData)
+      });
+
+      const msg = await res.json();
+      showMessage(msg.Messsage || msg.Message || msg.message, res.ok);
+      form.reset();
+      loadBooks();
+    }
+
+    function showMessage(text, success) {
+      const box = document.getElementById("response");
+      box.textContent = text;
+      box.className = "message " + (success ? "success" : "error");
+    }
+
+    document.getElementById("add-book-form").addEventListener("submit", handleFormSubmit);
+
+    loadBooks();
+  </script>
+</body>
